@@ -1,0 +1,7 @@
+{
+  "helloWorld": "你好，世界！",
+  "@helloWorld": {
+    "description": "问候语的文本"
+  },
+  "appTitle": "我的应用"
+}

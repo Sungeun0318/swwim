@@ -1,0 +1,2 @@
+C:/swim/android/app/.cxx/Debug/y173c711/x86_64/CMakeFiles/edit_cache.dir
+C:/swim/android/app/.cxx/Debug/y173c711/x86_64/CMakeFiles/rebuild_cache.dir
