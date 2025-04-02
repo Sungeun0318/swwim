@@ -1,0 +1,8 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"swim-ddaad",
+  "appId":"1:54469841565:android:6b8f5caf504693e0a6fa74",
+  "fileOutput":"android/app/google-services.json"}},
+  "dart":{"lib/firebase_options.dart":
+  {"projectId":"swim-ddaad","configurations":
+  {"android":"1:54469841565:android:6b8f5caf504693e0a6fa74",
+    "ios":"1:54469841565:ios:a378633235b2cba6a6fa74",
+    "macos":"1:54469841565:ios:a378633235b2cba6a6fa74"}}}}}}
