@@ -342,7 +342,7 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
                   _showSingleNumberPicker(
                     title: "간격(초)",
                     currentValue: _gap,
-                    minValue: 1,
+                    minValue: 5,  // 최소값 5초로 변경
                     maxValue: 60,
                     onSelected: (val) => setState(() => _gap = val),
                   )
@@ -572,7 +572,7 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
       return;
     }
 
-    // 🔴 인원 2명 이상일 때 간격 최소 5초
+    // 🔴 인원 2명 이상일 때 간격 최소 5초로 변경
     if (widget.numPeople > 1 && _gap < 5) {
       _showAlert("인원이 2명 이상일 경우 간격은 최소 5초 이상이어야 합니다.");
       return;

@@ -232,7 +232,7 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          "총 시간:\n${_totalTime}초",
+                          "총 시간:\n$_totalTime초",
                           textAlign: TextAlign.center,
                           style: const TextStyle(fontSize: 16),
                         ),

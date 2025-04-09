@@ -9,7 +9,7 @@ class TGTimerController {
   final String beepSound;
   final int numPeople;
   final VoidCallback onUpdate;
-  final void Function(String action)? onEvent; // "start", "pause", "resume", "reset", "cycle_beep"
+  final void Function(String action)? onEvent; // "start", "pause", "resume", "reset", "cycle_beep", "complete"
 
   Timer? _timer;
   Timer? _restTimer;
@@ -28,6 +28,7 @@ class TGTimerController {
   bool _isResting = false;
   int _restTimeRemaining = 0;
   String _restMessage = "";
+  bool _isCompleted = false;
 
   final SoundManager _soundManager = SoundManager();
 
@@ -48,6 +49,64 @@ class TGTimerController {
   bool get isRunning => _isRunning;
   int get restTimeRemaining => _restTimeRemaining;
   String get restMessage => _restMessage;
+  bool get isCompleted => _isCompleted;
+
+  // 총 훈련 진행률 (0.0 ~ 1.0)
+  double get totalProgress {
+    if (trainingList.isEmpty) return 0.0;
+
+    // 완료된 훈련의 총 시간
+    int completedTime = 0;
+    for (int i = 0; i < _currentTrainingIndex; i++) {
+      completedTime += trainingList[i].totalTime;
+    }
+
+    // 현재 훈련의 진행 시간
+    int currentTrainingProgress = 0;
+    if (_isResting) {
+      // 현재 훈련은 끝났고, 쉬는 시간 중
+      final current = trainingList[_currentTrainingIndex];
+      currentTrainingProgress = current.cycle * current.count;
+      // 휴식 진행도 추가
+      currentTrainingProgress += (current.restTime - _restTimeRemaining);
+    } else if (_startTime != null) {
+      final current = trainingList[_currentTrainingIndex];
+      final elapsed = DateTime.now().difference(_startTime!) - _pausedDuration;
+      currentTrainingProgress = elapsed.inSeconds.clamp(0, current.totalTime);
+    }
+
+    // 총 시간
+    int totalTime = 0;
+    for (var training in trainingList) {
+      totalTime += training.totalTime;
+    }
+
+    if (totalTime == 0) return 1.0; // 예외 처리
+
+    return (completedTime + currentTrainingProgress) / totalTime;
+  }
+
+  // 현재 훈련의 진행률 (0.0 ~ 1.0)
+  double get currentProgress {
+    if (_isCompleted) return 1.0;
+    if (trainingList.isEmpty) return 0.0;
+
+    final current = trainingList[_currentTrainingIndex];
+
+    if (_isResting) {
+      // 쉬는 시간 진행률 계산
+      if (current.restTime <= 0) return 1.0;
+      return 1.0 - (_restTimeRemaining / current.restTime);
+    }
+
+    if (_startTime == null) return 0.0;
+
+    final totalCycleTime = current.cycle * current.count;
+    if (totalCycleTime <= 0) return 0.0;
+
+    final elapsed = DateTime.now().difference(_startTime!) - _pausedDuration;
+    return (elapsed.inMilliseconds / (totalCycleTime * 1000)).clamp(0.0, 1.0);
+  }
 
   String get formattedElapsedTime {
     if (_isResting) {
@@ -58,6 +117,28 @@ class TGTimerController {
     final now = _isPaused && _pauseStart != null ? _pauseStart! : DateTime.now();
     final elapsed = now.difference(_startTime!) - _pausedDuration;
     return formatTime(elapsed.inMilliseconds);
+  }
+  // TGTimerController.dart 파일에 다음 메서드를 추가합니다
+
+  // 현재 훈련의 남은 시간
+  String get formattedRemainingTime {
+    if (_isCompleted) return "00:00:00.00";
+    if (_isResting) {
+      return formatTime(_restTimeRemaining * 1000);
+    }
+
+    if (_startTime == null || _currentTrainingIndex >= trainingList.length) {
+      return formatTime(0);
+    }
+
+    final current = trainingList[_currentTrainingIndex];
+    final totalTime = current.cycle * current.count * 1000; // 총 시간 (밀리초)
+
+    final now = _isPaused && _pauseStart != null ? _pauseStart! : DateTime.now();
+    final elapsed = now.difference(_startTime!) - _pausedDuration;
+
+    final remaining = totalTime - elapsed.inMilliseconds;
+    return formatTime(remaining > 0 ? remaining : 0);
   }
 
   String get timerButtonText => !_isRunning ? "시작" : (_isPaused ? "계속" : "정지");
@@ -78,6 +159,12 @@ class TGTimerController {
   }
 
   void startTraining() {
+    // 이미 모든 훈련이 완료되었으면 시작하지 않음
+    if (_isCompleted) {
+      onUpdate();
+      return;
+    }
+
     _isRunning = true;
     _isPaused = false;
     _isFinalCycle = false;
@@ -91,16 +178,24 @@ class TGTimerController {
     onEvent?.call("start");
 
     Future.delayed(const Duration(milliseconds: 2750), () {
-      if (_isRunning && !_isPaused) {
-        _startTime = DateTime.now();
-        _scheduleBeeps(); // 비프 타이머 예약
-        _startTimer();     // 타이머 시작
-        onUpdate();
+      // 지연 시간 동안 상태가 변경됐을 수 있으므로 다시 확인
+      if (!_isRunning || _isPaused || _isCompleted) {
+        return;
       }
+
+      _startTime = DateTime.now();
+      _scheduleBeeps(); // 비프 타이머 예약
+      _startTimer();    // 타이머 시작
+      onUpdate();
     });
   }
 
   void _startTimer() {
+    if (_currentTrainingIndex >= trainingList.length) {
+      _completeAllTraining();
+      return;
+    }
+
     final training = trainingList[_currentTrainingIndex];
     final cycleMs = training.cycle * 1000;
     final totalCycles = training.count;
@@ -112,48 +207,120 @@ class TGTimerController {
       final now = DateTime.now();
       final elapsedMs = now.difference(_startTime!).inMilliseconds - _pausedDuration.inMilliseconds;
 
-      // 싸이클 증가
-      int cycleIndex = elapsedMs ~/ cycleMs;
+      // 훈련 종료 조건을 먼저 확인
+      if (elapsedMs >= cycleMs * totalCycles) {
+        // 타이머 즉시 취소
+        timer.cancel();
+        _timer = null;
+
+        // 마지막 싸이클로 설정 (초과하지 않도록)
+        _currentCycleCount = totalCycles - 1;
+
+        // 훈련 종료 처리
+        _goToRestOrNextTraining();
+        return;
+      }
+
+      // 싸이클 계산 (최대값 제한)
+      int cycleIndex = (elapsedMs ~/ cycleMs).clamp(0, totalCycles - 1);
       if (cycleIndex != _currentCycleCount) {
         _currentCycleCount = cycleIndex;
         onUpdate();
-      }
-
-      // 훈련 종료
-      if (_currentCycleCount >= totalCycles) {
-        _timer?.cancel();
-        _goToRestOrNextTraining();
       }
 
       onUpdate();
     });
   }
 
+  void _completeAllTraining() {
+    // 모든 타이머 중지
+    _timer?.cancel();
+    _timer = null;
+    _restTimer?.cancel();
+    _restTimer = null;
+    _nextTrainingNotificationTimer?.cancel();
+    _nextTrainingNotificationTimer = null;
+    _cancelScheduledBeeps();
+
+    // 상태 업데이트
+    _isRunning = false;
+    _isPaused = false;
+    _isFinalCycle = true;
+    _isResting = false;
+    _isCompleted = true;
+
+    // 완료 이벤트 발생
+    onEvent?.call("complete");
+
+    onUpdate();
+  }
+
   void _scheduleBeeps() {
     _cancelScheduledBeeps(); // 이전 예약 취소
 
-    final training = trainingList[_currentTrainingIndex];
-    final intervalMs = training.interval * 1000;
-    final cycleMs = training.cycle * 1000;
-    final totalCycles = training.count;
+    if (_startTime == null) return;
 
-    // 간격 기반 음
+    final training = trainingList[_currentTrainingIndex];
+    final intervalMs = training.interval * 1000; // 간격(ms)
+    final cycleMs = training.cycle * 1000;      // 싸이클(ms)
+    final totalCycles = training.count;         // 총 싸이클 수
+
+    // 마지막 훈련인지 확인
+    final isLastTraining = (_currentTrainingIndex >= trainingList.length - 1);
+
+    // 현재까지 경과한 시간 계산 (일시정지 시간 고려)
+    final now = DateTime.now();
+    final elapsedMs = now.difference(_startTime!).inMilliseconds - _pausedDuration.inMilliseconds;
+
+    // 모든 비프음 시간을 저장할 Set (중복 제거를 위해 Set 사용)
+    final Set<int> beepTimes = {};
+
+    // 1. 첫 번째 사람의 각 싸이클 비프음 (2.75초 전에 울림)
+    for (int cycle = 1; cycle <= totalCycles; cycle++) {
+      // 마지막 훈련의 마지막 싸이클은 비프음 없음
+      if (isLastTraining && cycle == totalCycles) {
+        continue;
+      }
+
+      int beepTimepoint = (cycleMs * cycle);
+      int timeUntilBeep = beepTimepoint - elapsedMs - 2750;
+
+      // 아직 울리지 않은 비프음만 예약 (양수 값)
+      if (timeUntilBeep > 0) {
+        beepTimes.add(timeUntilBeep);
+      }
+    }
+
+    // 2. 2명 이상일 경우에만 추가 비프음
     if (numPeople > 1) {
-      for (int i = 1; i < numPeople; i++) {
-        int delay = (intervalMs * i) - 2750;
-        if (delay >= 0) {
-          final t = Timer(Duration(milliseconds: delay), () {
-            if (_isRunning && !_isPaused) _playBeep();
-          });
-          _scheduledBeeps.add(t);
+      // 각 사람에 대한 시작 시간 계산 (1번 사람은 0초, 2번 사람은 interval초, ...)
+      for (int personIndex = 1; personIndex < numPeople; personIndex++) {
+        // 각 사람의 첫 시작 시간
+        int personStartTime = intervalMs * personIndex;
+
+        // 이 사람의 각 싸이클에 대한 비프음
+        for (int cycle = 0; cycle < totalCycles; cycle++) {
+          int beepTimepoint = personStartTime + (cycleMs * cycle);
+          int timeUntilBeep = beepTimepoint - elapsedMs - 2750;
+
+          // 마지막 훈련의 마지막 싸이클은 비프음 없음
+          if (isLastTraining && cycle == totalCycles - 1) {
+            continue;
+          }
+
+          // 아직 울리지 않은 비프음만 예약 (양수 값)
+          if (timeUntilBeep > 0) {
+            beepTimes.add(timeUntilBeep);
+          }
         }
       }
     }
 
-    // 싸이클 반복 음
-    for (int i = 1; i <= totalCycles; i++) {
-      int delay = (cycleMs * i) - 2750;
-      if (delay >= 0) {
+    // 모든 비프음 시간을 정렬하고 타이머 예약
+    final List<int> sortedBeepTimes = beepTimes.toList()..sort();
+
+    if (numPeople >= 1) {
+      for (final delay in sortedBeepTimes) {
         final t = Timer(Duration(milliseconds: delay), () {
           if (_isRunning && !_isPaused) _playBeep();
         });
@@ -191,6 +358,8 @@ class TGTimerController {
           if (_restTimeRemaining == 10) {
             _restMessage = "10초 후 다음 훈련이 시작됩니다";
             _playBeep(); // 알림음
+          } else if (_restTimeRemaining < 10) {
+            _restMessage = "$_restTimeRemaining초 후 다음 훈련이 시작됩니다";
           }
 
           onUpdate();
@@ -214,11 +383,11 @@ class TGTimerController {
       _currentTrainingIndex++;
       _currentCycleCount = 0;
       _startTime = null;
+      _isResting = false;
+      _restMessage = "";
       startTraining();
     } else {
-      _isRunning = false;
-      _isFinalCycle = true;
-      onUpdate();
+      _completeAllTraining();  // 모든 훈련 완료 처리
     }
   }
 
@@ -245,9 +414,13 @@ class TGTimerController {
   }
 
   void _resumeTimer() {
-    if (_pauseStart != null && _startTime != null && !_isResting) {
+    if (_pauseStart != null && _startTime != null) {
+      // 일시정지 지속 시간 계산
       final pauseDuration = DateTime.now().difference(_pauseStart!);
       _pausedDuration += pauseDuration;
+
+      // 시작 시간을 조정하지 않고 누적된 일시정지 시간으로 조정
+      // (기존 _startTime 유지)
     }
 
     _isPaused = false;
@@ -265,6 +438,8 @@ class TGTimerController {
           if (_restTimeRemaining == 10) {
             _restMessage = "10초 후 다음 훈련이 시작됩니다";
             _playBeep(); // 알림음
+          } else if (_restTimeRemaining < 10) {
+            _restMessage = "$_restTimeRemaining초 후 다음 훈련이 시작됩니다";
           }
 
           onUpdate();
@@ -276,7 +451,11 @@ class TGTimerController {
         }
       });
     } else {
+      // 기존 비프음 취소 및 새로운 비프음 예약
+      _cancelScheduledBeeps();
       _scheduleBeeps();
+
+      // 타이머 재시작
       _startTimer();
     }
 
@@ -287,13 +466,18 @@ class TGTimerController {
 
   void resetTimer() {
     _timer?.cancel();
+    _timer = null;
     _restTimer?.cancel();
+    _restTimer = null;
     _nextTrainingNotificationTimer?.cancel();
+    _nextTrainingNotificationTimer = null;
     _cancelScheduledBeeps();
+
     _isRunning = false;
     _isPaused = false;
     _isFinalCycle = false;
     _isResting = false;
+    _isCompleted = false;
     _currentCycleCount = 0;
     _currentTrainingIndex = 0;
     _startTime = null;
@@ -301,6 +485,7 @@ class TGTimerController {
     _pausedDuration = Duration.zero;
     _restTimeRemaining = 0;
     _restMessage = "";
+
     onUpdate();
     onEvent?.call("reset");
   }
