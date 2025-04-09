@@ -9,8 +9,11 @@ class TGTimerController {
   final String beepSound;
   final int numPeople;
   final VoidCallback onUpdate;
+  final void Function(String action)? onEvent; // "start", "pause", "resume", "reset", "cycle_beep"
 
   Timer? _timer;
+  Timer? _restTimer;
+  Timer? _nextTrainingNotificationTimer;
   final List<Timer> _scheduledBeeps = [];
 
   DateTime? _startTime;
@@ -23,6 +26,8 @@ class TGTimerController {
   bool _isPaused = false;
   bool _isFinalCycle = false;
   bool _isResting = false;
+  int _restTimeRemaining = 0;
+  String _restMessage = "";
 
   final SoundManager _soundManager = SoundManager();
 
@@ -31,6 +36,7 @@ class TGTimerController {
     required this.beepSound,
     required this.numPeople,
     required this.onUpdate,
+    this.onEvent,
   });
 
   int get currentTrainingIndex => _currentTrainingIndex;
@@ -40,8 +46,14 @@ class TGTimerController {
   bool get isResting => _isResting;
   bool get isPaused => _isPaused;
   bool get isRunning => _isRunning;
+  int get restTimeRemaining => _restTimeRemaining;
+  String get restMessage => _restMessage;
 
   String get formattedElapsedTime {
+    if (_isResting) {
+      return formatTime(_restTimeRemaining * 1000);
+    }
+
     if (_startTime == null) return formatTime(0);
     final now = _isPaused && _pauseStart != null ? _pauseStart! : DateTime.now();
     final elapsed = now.difference(_startTime!) - _pausedDuration;
@@ -50,8 +62,19 @@ class TGTimerController {
 
   String get timerButtonText => !_isRunning ? "시작" : (_isPaused ? "계속" : "정지");
 
+  String get displayTitle {
+    if (_isResting) {
+      return "쉬는 시간";
+    } else if (_currentTrainingIndex < trainingList.length) {
+      return trainingList[_currentTrainingIndex].title;
+    }
+    return "";
+  }
+
   void _playBeep() {
     _soundManager.playSound(beepSound);
+    // 비프음 이벤트를 cycle_beep로 표시하여 다른 이벤트와 구분
+    onEvent?.call("cycle_beep");
   }
 
   void startTraining() {
@@ -61,8 +84,12 @@ class TGTimerController {
     _isResting = false;
     _currentCycleCount = 0;
     _pausedDuration = Duration.zero;
+    _restMessage = "";
 
     _playBeep(); // 시작음
+    // 시작 이벤트
+    onEvent?.call("start");
+
     Future.delayed(const Duration(milliseconds: 2750), () {
       if (_isRunning && !_isPaused) {
         _startTime = DateTime.now();
@@ -143,20 +170,46 @@ class TGTimerController {
   }
 
   void _goToRestOrNextTraining() {
+    // 현재 훈련 정보 가져오기
     final current = trainingList[_currentTrainingIndex];
-    if (current.restTime > 0) {
+
+    // 쉬는 시간이 있고 다음 훈련이 있을 때만 쉬는 시간 타이머 시작
+    if (current.restTime > 0 && _currentTrainingIndex < trainingList.length - 1) {
       _isResting = true;
-      onUpdate();
-      Future.delayed(Duration(seconds: current.restTime), () {
-        _isResting = false;
-        _goToNextTraining();
+      _restTimeRemaining = current.restTime;
+      onEvent?.call("rest_start");
+
+      // 쉬는 시간 타이머
+      _restTimer?.cancel();
+      _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (_isPaused) return;
+
+        if (_restTimeRemaining > 0) {
+          _restTimeRemaining--;
+
+          // 다음 훈련 시작 10초 전 알림
+          if (_restTimeRemaining == 10) {
+            _restMessage = "10초 후 다음 훈련이 시작됩니다";
+            _playBeep(); // 알림음
+          }
+
+          onUpdate();
+        } else {
+          _restTimer?.cancel();
+          _isResting = false;
+          _restMessage = "";
+          _goToNextTraining();
+        }
       });
+      onUpdate();
     } else {
       _goToNextTraining();
     }
   }
 
   void _goToNextTraining() {
+    _nextTrainingNotificationTimer?.cancel();
+
     if (_currentTrainingIndex < trainingList.length - 1) {
       _currentTrainingIndex++;
       _currentCycleCount = 0;
@@ -183,26 +236,59 @@ class TGTimerController {
     _isPaused = true;
     _pauseStart = DateTime.now();
     _timer?.cancel();
+    _restTimer?.cancel();
+    _nextTrainingNotificationTimer?.cancel();
     _cancelScheduledBeeps();
     _soundManager.pauseSound();
     onUpdate();
+    onEvent?.call("pause");
   }
 
   void _resumeTimer() {
-    if (_pauseStart != null && _startTime != null) {
+    if (_pauseStart != null && _startTime != null && !_isResting) {
       final pauseDuration = DateTime.now().difference(_pauseStart!);
       _pausedDuration += pauseDuration;
     }
+
     _isPaused = false;
     _pauseStart = null;
-    _scheduleBeeps();
-    _startTimer();
+
+    if (_isResting) {
+      // 쉬는 시간 타이머 재시작
+      _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (_isPaused) return;
+
+        if (_restTimeRemaining > 0) {
+          _restTimeRemaining--;
+
+          // 다음 훈련 시작 10초 전 알림
+          if (_restTimeRemaining == 10) {
+            _restMessage = "10초 후 다음 훈련이 시작됩니다";
+            _playBeep(); // 알림음
+          }
+
+          onUpdate();
+        } else {
+          _restTimer?.cancel();
+          _isResting = false;
+          _restMessage = "";
+          _goToNextTraining();
+        }
+      });
+    } else {
+      _scheduleBeeps();
+      _startTimer();
+    }
+
     _soundManager.resumeSound();
     onUpdate();
+    onEvent?.call("resume");
   }
 
   void resetTimer() {
     _timer?.cancel();
+    _restTimer?.cancel();
+    _nextTrainingNotificationTimer?.cancel();
     _cancelScheduledBeeps();
     _isRunning = false;
     _isPaused = false;
@@ -213,11 +299,16 @@ class TGTimerController {
     _startTime = null;
     _pauseStart = null;
     _pausedDuration = Duration.zero;
+    _restTimeRemaining = 0;
+    _restMessage = "";
     onUpdate();
+    onEvent?.call("reset");
   }
 
   void dispose() {
     _timer?.cancel();
+    _restTimer?.cancel();
+    _nextTrainingNotificationTimer?.cancel();
     _cancelScheduledBeeps();
   }
 }

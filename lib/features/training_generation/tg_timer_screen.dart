@@ -35,6 +35,27 @@ class _TGTimerScreenState extends State<TGTimerScreen> {
       onUpdate: () {
         setState(() {});
       },
+      onEvent: (action) async {
+        if (!_videoController.value.isInitialized) return;
+
+        // 메인 이벤트(시작, 일시정지, 다시시작, 초기화)에만 반응하도록 수정
+        // 싸이클 비프음에는 영상을 중단하지 않음
+        if (action == "start") {
+          // 시작 이벤트는 _handleToggle에서 처리하므로 여기서는 처리하지 않음
+        } else if (action == "pause") {
+          if (_videoController.value.isPlaying) {
+            await _videoController.pause();
+          }
+        } else if (action == "resume") {
+          if (!_videoController.value.isPlaying) {
+            await _videoController.play();
+          }
+        } else if (action == "reset") {
+          await _videoController.pause();
+          await _videoController.seekTo(Duration.zero);
+        }
+        // 비프음 이벤트(cycle_beep)는 무시
+      },
     );
 
     _videoController = VideoPlayerController.asset('assets/videos/swim.mp4')
@@ -59,17 +80,23 @@ class _TGTimerScreenState extends State<TGTimerScreen> {
   void _handleToggle() async {
     if (!_timerController.isRunning) {
       _timerController.startTraining();
-      if (_videoController.value.isInitialized && !_videoController.value.isPlaying) {
-        await _videoController.play();
-      }
+
+      // ✅ 영상도 2.75초 뒤에 재생되도록 delay 추가
+      Future.delayed(const Duration(milliseconds: 2750), () async {
+        if (_videoController.value.isInitialized &&
+            _timerController.isRunning &&
+            !_timerController.isPaused) {
+          await _videoController.play();
+        }
+      });
     } else if (_timerController.isPaused) {
       _timerController.toggleTimer();
-      if (_videoController.value.isInitialized && !_videoController.value.isPlaying) {
+      if (_videoController.value.isInitialized) {
         await _videoController.play();
       }
     } else {
       _timerController.toggleTimer();
-      if (_videoController.value.isInitialized && _videoController.value.isPlaying) {
+      if (_videoController.value.isInitialized) {
         await _videoController.pause();
       }
     }
