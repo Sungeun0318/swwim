@@ -54,6 +54,7 @@ class TGTimerController {
   // 총 훈련 진행률 (0.0 ~ 1.0)
   double get totalProgress {
     if (trainingList.isEmpty) return 0.0;
+    if (_isPaused) return _lastTotalProgress ?? 0.0; // 일시정지 상태면 마지막 진행도 반환
 
     // 완료된 훈련의 총 시간
     int completedTime = 0;
@@ -83,20 +84,25 @@ class TGTimerController {
 
     if (totalTime == 0) return 1.0; // 예외 처리
 
-    return (completedTime + currentTrainingProgress) / totalTime;
+    final progress = (completedTime + currentTrainingProgress) / totalTime;
+    _lastTotalProgress = progress; // 현재 진행도 저장
+    return progress;
   }
 
-  // 현재 훈련의 진행률 (0.0 ~ 1.0)
+// 현재 훈련의 진행률 (0.0 ~ 1.0) 수정
   double get currentProgress {
     if (_isCompleted) return 1.0;
     if (trainingList.isEmpty) return 0.0;
+    if (_isPaused) return _lastCurrentProgress ?? 0.0; // 일시정지 상태면 마지막 진행도 반환
 
     final current = trainingList[_currentTrainingIndex];
 
     if (_isResting) {
       // 쉬는 시간 진행률 계산
       if (current.restTime <= 0) return 1.0;
-      return 1.0 - (_restTimeRemaining / current.restTime);
+      final progress = 1.0 - (_restTimeRemaining / current.restTime);
+      _lastCurrentProgress = progress; // 현재 진행도 저장
+      return progress;
     }
 
     if (_startTime == null) return 0.0;
@@ -105,8 +111,12 @@ class TGTimerController {
     if (totalCycleTime <= 0) return 0.0;
 
     final elapsed = DateTime.now().difference(_startTime!) - _pausedDuration;
-    return (elapsed.inMilliseconds / (totalCycleTime * 1000)).clamp(0.0, 1.0);
+    final progress = (elapsed.inMilliseconds / (totalCycleTime * 1000)).clamp(0.0, 1.0);
+    _lastCurrentProgress = progress; // 현재 진행도 저장
+    return progress;
   }
+  double? _lastTotalProgress; // 마지막으로 계산된 총 진행률
+  double? _lastCurrentProgress;
 
   String get formattedElapsedTime {
     if (_isResting) {
@@ -404,6 +414,11 @@ class TGTimerController {
   void _pauseTimer() {
     _isPaused = true;
     _pauseStart = DateTime.now();
+
+    // 현재 진행률 저장
+    _lastTotalProgress = totalProgress;
+    _lastCurrentProgress = currentProgress;
+
     _timer?.cancel();
     _restTimer?.cancel();
     _nextTrainingNotificationTimer?.cancel();
@@ -471,6 +486,8 @@ class TGTimerController {
     _restTimer = null;
     _nextTrainingNotificationTimer?.cancel();
     _nextTrainingNotificationTimer = null;
+    _lastTotalProgress = null;
+    _lastCurrentProgress = null;
     _cancelScheduledBeeps();
 
     _isRunning = false;
