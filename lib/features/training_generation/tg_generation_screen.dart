@@ -5,7 +5,7 @@ import 'tg_beep_settings_screen.dart';
 import 'tg_timer_screen.dart';
 
 class TGGenerationScreen extends StatefulWidget {
-  const TGGenerationScreen({Key? key}) : super(key: key);
+  const TGGenerationScreen({super.key});
 
   @override
   _TGGenerationScreenState createState() => _TGGenerationScreenState();
@@ -71,6 +71,54 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
     _trainings.add(newTraining);
     _updateTotals();
     setState(() {});
+  }
+
+  void _deleteTraining(int index) {
+    // 적어도 하나의 훈련은 남겨두어야 함
+    if (_trainings.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("최소 하나의 훈련은 필요합니다.")),
+      );
+      return;
+    }
+
+    // 삭제 확인 다이얼로그 표시
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("훈련 삭제"),
+        content: Text("'${_trainings[index].title}'을(를) 삭제하시겠습니까?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("취소"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() {
+                _trainings.removeAt(index);
+                // 훈련 인덱스 업데이트
+                for (int i = index; i < _trainings.length; i++) {
+                  // 훈련 제목이 "훈련 X" 형식이면 인덱스 업데이트
+                  final title = _trainings[i].title;
+                  final regex = RegExp(r"훈련 (\d+)");
+                  final match = regex.firstMatch(title);
+                  if (match != null) {
+                    _trainings[i].title = "훈련 ${i + 1}";
+                  }
+                }
+                _updateTotals();
+              });
+            },
+            child: const Text(
+              "삭제",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _updateTotals() {
@@ -317,16 +365,38 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
     final train = _trainings[index];
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListTile(
-        onTap: () => _goDetail(index),
-        title: Text(
-          "${index + 1}. ${train.title}",
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        trailing: Text(
-          "${train.distance}m / ${_formatCycle(train.cycle)}",
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
-        ),
+      child: Stack(
+        children: [
+          // 기존 ListTile
+          ListTile(
+            onTap: () => _goDetail(index),
+            title: Text(
+              "${index + 1}. ${train.title}",
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            trailing: Text(
+              "${train.distance}m / ${_formatCycle(train.cycle)}",
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ),
+
+          // 삭제 버튼 (X 버튼)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: InkWell(
+              onTap: () => _deleteTraining(index),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                child: const Icon(
+                  Icons.close,
+                  size: 16,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
