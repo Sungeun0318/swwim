@@ -1,0 +1,70 @@
+name: swim
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  audioplayers: ^6.1.1
+  path_provider: ^2.0.3
+  google_fonts: ^6.1.0
+  marquee: ^2.2.3
+  video_player: ^2.7.0
+  flutter_svg: ^2.0.9
+
+  table_calendar: ^3.0.0
+  intl: ^0.19.0
+  flutter_localizations:
+    sdk: flutter
+  font_awesome_flutter: ^10.2.1
+  firebase_core: ^3.12.1
+  firebase_auth: ^5.5.1
+  cloud_firestore: ^5.6.5
+  google_sign_in: ^6.1.0
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.4
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  generate: true
+  uses-material-design: true
+  assets:
+    - assets/ppppig.mp3
+    - assets/Take your marks.mp3
+    - assets/images/z_top_logo.png
+    - assets/images/111.png
+    - assets/icons/google_logo.png
+    - assets/icons/google_logo2.png
+    - assets/icons/apple_logo.png
+    - assets/icons/apple_logo2.png
+    - assets/videos/swim.mp4
+
+  fonts:
+    - family: MyCustomFont
+      fonts:
+        - asset: assets/fonts/myfont.ttf
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/Z_TOP.png"
+
+flutter_native_splash:
+  color: "#ffffff"
+  image: assets/images/iconn.png  # 스플래시 화면에 표시할 이미지 파일 경로
+  android: true
+  android12: true
+  ios: true
+
+l10n:
+  arb-dir: lib/l10n
+  template-arb-file: app_en.arb
+  output-localization-file: app_localizations.dart
