@@ -1,0 +1,2 @@
+C:/swwim/swwim/android/app/.cxx/Debug/3f42b2n6/x86_64/CMakeFiles/edit_cache.dir
+C:/swwim/swwim/android/app/.cxx/Debug/3f42b2n6/x86_64/CMakeFiles/rebuild_cache.dir
