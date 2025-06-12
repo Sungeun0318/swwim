@@ -1,0 +1,7 @@
+{
+  "helloWorld": "안녕하세요, 세계!",
+  "@helloWorld": {
+    "description": "인사말에 대한 텍스트"
+  },
+  "appTitle": "내 앱"
+}

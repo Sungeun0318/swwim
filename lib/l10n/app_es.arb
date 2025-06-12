@@ -1,0 +1,7 @@
+{
+  "helloWorld": "¡Hola, Mundo!",
+  "@helloWorld": {
+    "description": "Texto para el mensaje de saludo"
+  },
+  "appTitle": "Mi Aplicación"
+}
