@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "191069660562",
+    "project_id": "zeroontop-88ce3",
+    "storage_bucket": "zeroontop-88ce3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:191069660562:android:7f032f6b9896b9cee00d4b",
+        "android_client_info": {
+          "package_name": "com.android.application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4ph_91aooYVODK9KWYf5F-T5J6iUvM90"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:191069660562:android:377eb6d5889690c2e00d4b",
+        "android_client_info": {
+          "package_name": "com.example.swim"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4ph_91aooYVODK9KWYf5F-T5J6iUvM90"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
