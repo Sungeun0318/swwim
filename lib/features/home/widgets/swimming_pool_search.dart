@@ -1,18 +1,18 @@
-// lib/features/home/widgets/swimming_pool_search.dart
+// lib/features/home/widgets/swimming_pool_search.dart - 최소한 수정
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../services/places_service.dart';
 
-class SwimmingPoolSearchScreen extends StatefulWidget {
-  const SwimmingPoolSearchScreen({Key? key}) : super(key: key);
+class SwimmingPoolSearch extends StatefulWidget {
+  const SwimmingPoolSearch({Key? key}) : super(key: key);
 
   @override
-  State<SwimmingPoolSearchScreen> createState() => _SwimmingPoolSearchScreenState();
+  State<SwimmingPoolSearch> createState() => _SwimmingPoolSearchState();
 }
 
-class _SwimmingPoolSearchScreenState extends State<SwimmingPoolSearchScreen> {
+class _SwimmingPoolSearchState extends State<SwimmingPoolSearch> {
   GoogleMapController? _mapController;
   final TextEditingController _searchController = TextEditingController();
   final PlacesService _placesService = PlacesService();
@@ -63,7 +63,7 @@ class _SwimmingPoolSearchScreenState extends State<SwimmingPoolSearchScreen> {
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('위치 권한이 영구적으로 거부되었습니다')),
+            const SnackBar(content: Text('위치 권한이 영구적으로 거부되었습니다. 설정에서 권한을 허용해주세요')),
           );
         }
         return;
@@ -215,102 +215,53 @@ class _SwimmingPoolSearchScreenState extends State<SwimmingPoolSearchScreen> {
             const SizedBox(height: 20),
 
             // 수영장 사진
-            if (pool['photo_url'] != null) ...[
+            if (pool['photo_url'] != null && pool['photo_url'].isNotEmpty) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: double.infinity,
+                child: Image.network(
+                  pool['photo_url'],
                   height: 200,
-                  child: Image.network(
-                    pool['photo_url'],
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      if (kDebugMode) {
-                        print('이미지 로드 오류: $error');
-                      }
-                      return Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.pool, size: 48, color: Colors.blue),
-                              SizedBox(height: 8),
-                              Text('수영장 이미지', style: TextStyle(color: Colors.blue)),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ] else ...[
-              // 사진이 없을 때 기본 아이콘 표시
-              Container(
-                width: double.infinity,
-                height: 200,
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.pool, size: 64, color: Colors.blue),
-                      SizedBox(height: 12),
-                      Text(
-                        '수영장',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.pool,
+                      size: 80,
+                      color: Colors.blue.shade300,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
             ],
 
+            // 수영장 정보
             Text(
               pool['name'] ?? '수영장',
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             if (pool['address'] != null) ...[
               Row(
                 children: [
-                  const Icon(Icons.location_on, size: 18, color: Colors.grey),
-                  const SizedBox(width: 6),
+                  Icon(Icons.location_on, color: Colors.grey.shade600, size: 16),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       pool['address'],
-                      style: const TextStyle(color: Colors.grey, fontSize: 14),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ],
@@ -318,53 +269,31 @@ class _SwimmingPoolSearchScreenState extends State<SwimmingPoolSearchScreen> {
               const SizedBox(height: 8),
             ],
 
-            Row(
-              children: [
-                if (pool['distance'] != null) ...[
-                  const Icon(Icons.directions_walk, size: 18, color: Colors.grey),
-                  const SizedBox(width: 6),
-                  Text('${pool['distance']}m'),
-                  const SizedBox(width: 20),
-                ],
-                if (pool['rating'] != null && pool['rating'] > 0) ...[
-                  const Icon(Icons.star, size: 18, color: Colors.amber),
-                  const SizedBox(width: 6),
-                  Text('${pool['rating']}'),
-                ],
-              ],
-            ),
-
-            if (pool['phone'] != null) ...[
-              const SizedBox(height: 8),
+            if (pool['rating'] != null) ...[
               Row(
                 children: [
-                  const Icon(Icons.phone, size: 18, color: Colors.grey),
-                  const SizedBox(width: 6),
-                  Text(pool['phone']),
+                  Icon(Icons.star, color: Colors.amber, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${pool['rating']}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
                 ],
               ),
+              const SizedBox(height: 16),
             ],
 
-            const SizedBox(height: 24),
-
+            // 선택 버튼 - 결과 반환하도록 수정
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  if (kDebugMode) {
-                    print('수영장 선택 완료: ${pool['name']}');
-                  }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${pool['name']}이(가) 선택되었습니다!'),
-                      backgroundColor: Colors.green,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-
-                  Navigator.pop(context); // 바텀시트 닫기
-                  Navigator.pop(context, pool); // 선택된 수영장 반환
+                  // 선택된 수영장 데이터를 이전 화면으로 반환
+                  Navigator.of(context).pop(); // 모달 닫기
+                  Navigator.of(context).pop(pool); // 검색 화면 닫으면서 데이터 반환
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
@@ -378,29 +307,13 @@ class _SwimmingPoolSearchScreenState extends State<SwimmingPoolSearchScreen> {
                   '이 수영장 선택하기',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  '취소',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-
-            SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -414,7 +327,7 @@ class _SwimmingPoolSearchScreenState extends State<SwimmingPoolSearchScreen> {
         title: const Text('수영장 검색'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
-        elevation: 1,
+        elevation: 0,
         actions: [
           IconButton(
             icon: Icon(_showMap ? Icons.list : Icons.map),
@@ -428,14 +341,13 @@ class _SwimmingPoolSearchScreenState extends State<SwimmingPoolSearchScreen> {
       ),
       body: Column(
         children: [
-          // 검색창
-          Container(
+          // 검색 바
+          Padding(
             padding: const EdgeInsets.all(16),
-            color: Colors.white,
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: '수영장 이름이나 지역을 검색하세요',
+                hintText: '수영장 이름을 검색하세요',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -520,110 +432,65 @@ class _SwimmingPoolSearchScreenState extends State<SwimmingPoolSearchScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
         final pool = _searchResults[index];
         return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => _selectPool(pool),
-            child: Column(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: ListTile(
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: pool['photo_url'] != null
+                  ? Image.network(
+                pool['photo_url'],
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 60,
+                  height: 60,
+                  color: Colors.blue.shade50,
+                  child: Icon(Icons.pool, color: Colors.blue.shade300),
+                ),
+              )
+                  : Container(
+                width: 60,
+                height: 60,
+                color: Colors.blue.shade50,
+                child: Icon(Icons.pool, color: Colors.blue.shade300),
+              ),
+            ),
+            title: Text(
+              pool['name'] ?? '수영장',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 수영장 사진
-                if (pool['photo_url'] != null) ...[
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: Container(
-                      width: double.infinity,
-                      height: 150,
-                      child: Image.network(
-                        pool['photo_url'],
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.blue.shade100,
-                            child: const Center(
-                              child: Icon(Icons.pool, size: 48, color: Colors.blue),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                if (pool['address'] != null)
+                  Text(
+                    pool['address'],
+                    style: TextStyle(color: Colors.grey.shade600),
                   ),
-                ] else ...[
-                  Container(
-                    width: double.infinity,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.pool, size: 48, color: Colors.blue),
-                    ),
-                  ),
-                ],
-
-                // 수영장 정보
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        pool['name'] ?? '수영장',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        pool['address'] ?? '',
-                        style: const TextStyle(color: Colors.grey, fontSize: 14),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              if (pool['distance'] != null) ...[
-                                Icon(Icons.directions_walk, size: 16, color: Colors.grey[600]),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${pool['distance']}m',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                                ),
-                                const SizedBox(width: 16),
-                              ],
-                              if (pool['rating'] != null && pool['rating'] > 0) ...[
-                                Icon(Icons.star, size: 16, color: Colors.amber),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${pool['rating']}',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                                ),
-                              ],
-                            ],
-                          ),
-                          Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
-                        ],
-                      ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    if (pool['rating'] != null && pool['rating'] > 0) ...[
+                      Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
+                      Text('${pool['rating']}'),
+                      const SizedBox(width: 16),
                     ],
-                  ),
+                    if (pool['distance'] != null) ...[
+                      Icon(Icons.directions_walk, color: Colors.grey.shade600, size: 16),
+                      const SizedBox(width: 4),
+                      Text('${(pool['distance'] / 1000).toStringAsFixed(1)}km'),
+                    ],
+                  ],
                 ),
               ],
             ),
+            onTap: () => _selectPool(pool),
           ),
         );
       },

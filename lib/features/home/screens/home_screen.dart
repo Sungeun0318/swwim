@@ -28,10 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadNearbyPools() async {
     try {
-      // Firebase에서 주변 수영장 데이터 로드
+      // Firebase에서 주변 수영장 데이터 로드 - area 조건 제거 (인덱스 오류 방지)
       final snapshot = await FirebaseFirestore.instance
           .collection('swimming_pools')
-          .where('area', isEqualTo: '수원시') // 예시: 지역별 필터
           .limit(10)
           .get();
 
@@ -53,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       print('주변 수영장 로드 실패: $e');
-      // 오류 시 더미 데이터 사용
+      // 오류 시 더미 데이터 사용 (원래 로직 유지)
       setState(() {
         nearbyPools = [
           {
@@ -84,12 +83,21 @@ class _HomeScreenState extends State<HomeScreen> {
     if (user == null) return;
 
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      // 사용자 문서 확인 및 생성 (오류 방지)
+      final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final doc = await userDocRef.get();
 
-      if (doc.exists && doc.data()?['selectedPool'] != null) {
+      if (!doc.exists) {
+        // 새 사용자 문서 생성
+        await userDocRef.set({
+          'uid': user.uid,
+          'email': user.email ?? '',
+          'createdAt': FieldValue.serverTimestamp(),
+          'selectedPool': null,
+          'favoritePools': [],
+        });
+        print('새 사용자 문서 생성: ${user.uid}');
+      } else if (doc.data()?['selectedPool'] != null) {
         setState(() {
           selectedPool = Map<String, dynamic>.from(doc.data()!['selectedPool']);
           selectedPoolName = selectedPool!['name'];
@@ -109,13 +117,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (user == null) return;
 
     try {
-      // Firebase 구조에 맞게 데이터 정리
+      // Firebase 구조에 맞게 데이터 정리 - 더 안전한 처리
       final poolData = {
+        'id': pool['id'] ?? pool['place_id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
         'name': pool['name'],
-        'address': pool['address'],
-        'imageUrl': pool['imageUrl'] ?? '',
-        'rating': pool['rating'] ?? 0.0,
-        'facilities': pool['facilities'] ?? [],
+        'address': pool['address'] ?? pool['vicinity'] ?? '',
+        'imageUrl': pool['imageUrl'] ?? pool['photo_url'] ?? '',
+        'rating': (pool['rating'] ?? 0.0).toDouble(),
+        'facilities': List<String>.from(pool['facilities'] ?? []),
         'selectedAt': FieldValue.serverTimestamp(),
       };
 
@@ -133,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
         SnackBar(content: Text('${poolData['name']}이(가) 선택되었습니다')),
       );
     } catch (e) {
+      print('수영장 저장 실패: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('수영장 선택에 실패했습니다')),
       );
@@ -244,14 +254,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 16),
 
-            // 선택된 수영장 또는 수영장 고르기
+            // 선택된 수영장 또는 수영장 고르기 - 수정된 부분
             SwimmingPoolSelector(
               selectedPool: selectedPool,
               onTap: () async {
                 final result = await Navigator.push<Map<String, dynamic>>(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const SwimmingPoolSearchScreen(),
+                    builder: (context) => const SwimmingPoolSearch(), // 올바른 클래스명
                   ),
                 );
                 if (result != null) {
@@ -273,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 12),
 
-            // 검색창
+            // 검색창 - 수정된 부분
             Container(
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
@@ -290,13 +300,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     vertical: 12,
                   ),
                 ),
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final result = await Navigator.push<Map<String, dynamic>>(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const SwimmingPoolSearchScreen(),
+                      builder: (context) => const SwimmingPoolSearch(), // 올바른 클래스명
                     ),
                   );
+                  if (result != null) {
+                    await _selectPool(result);
+                  }
                 },
                 readOnly: true,
               ),
@@ -333,6 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 pool['imageUrl'],
                 pool['rating'].toDouble(),
                 pool['facilities'],
+                pool, // 전체 pool 데이터 전달
               )).toList(),
             ),
           ],
@@ -347,6 +361,7 @@ class _HomeScreenState extends State<HomeScreen> {
       String imageUrl,
       double rating,
       List facilities,
+      Map<String, dynamic> poolData, // 전체 데이터 추가
       ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -443,15 +458,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // 선택 버튼
+          // 선택 버튼 - 전체 데이터 전달하도록 수정
           IconButton(
-            onPressed: () => _selectPool({
-              'name': name,
-              'address': address,
-              'imageUrl': imageUrl,
-              'rating': rating,
-              'facilities': facilities,
-            }),
+            onPressed: () => _selectPool(poolData), // 전체 데이터 전달
             icon: Icon(
               Icons.add_circle_outline,
               color: Colors.blue.shade600,
