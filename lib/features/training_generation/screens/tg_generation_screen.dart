@@ -6,13 +6,12 @@ import 'package:swim/features/training_generation/models/training_session.dart';
 import 'package:swim/repositories/training_repository.dart';
 import 'tg_beep_settings_screen.dart';
 import 'tg_timer_screen.dart';
-import 'package:swim/common/widgets/animated_loading.dart';
 
 class TGGenerationScreen extends StatefulWidget {
   const TGGenerationScreen({super.key});
 
   @override
-  State<TGGenerationScreen> createState() => _TGGenerationScreenState(); // createState 타입 수정
+  State<TGGenerationScreen> createState() => _TGGenerationScreenState();
 }
 
 class _TGGenerationScreenState extends State<TGGenerationScreen> {
@@ -182,9 +181,8 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
         showDialog(
           context: currentContext,
           barrierDismissible: false,
-          builder: (dialogContext) => const FullScreenLoading(
-            message: "훈련 세션을 준비하는 중...",
-            backgroundColor: Colors.black87,
+          builder: (dialogContext) => const Center(
+            child: CircularProgressIndicator(),
           ),
         );
       }
@@ -246,6 +244,13 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
     }
   }
 
+  // 커뮤니티 기능 (나중에 구현)
+  void _showCommunityDialog() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("커뮤니티 공유 기능 (개발 예정)")),
+    );
+  }
+
   // 사이클 시간을 포맷하는 함수
   String _formatCycle(int cycle) {
     if (cycle < 60) {
@@ -274,51 +279,261 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
     }
   }
 
+  // 새로운 스타일의 훈련 카드 (기존 기능 유지)
+  Widget _buildTrainingCard(int index) {
+    final train = _trainings[index];
+    final isFirst = index == 0;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // 기존 ListTile 기능 유지하면서 새로운 디자인 적용
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => _goDetail(index), // 기존 기능 유지
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 훈련 제목
+                    Row(
+                      children: [
+                        Text(
+                          "${index + 1}. ${train.title}",
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const Spacer(),
+                        // 거리/사이클 정보 (기존 trailing 정보)
+                        Text(
+                          "${train.distance}m / ${_formatCycle(train.cycle)}",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // 추가 정보 표시
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        _buildInfoChip("개수", "${train.count}개"),
+                        _buildInfoChip("간격", "${train.interval}초"),
+                        if (!isFirst) _buildInfoChip("쉬는시간", "${train.restTime}초"),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 삭제 버튼 (X 버튼) - 기존 기능 유지
+          if (_trainings.length > 1)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: InkWell(
+                onTap: () => _deleteTraining(index),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: 16,
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // 정보 칩 위젯
+  Widget _buildInfoChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Text(
+        "$label: $value",
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.blue.shade700,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      // 상단바 - S.png 로고 + Training Generation
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Center(
+          child: Image.asset(
+            'assets/images/S.png',
+            width: 40,
+            height: 40,
+            fit: BoxFit.contain,
+          ),
+        ),
+        centerTitle: true,
+        actions: const [SizedBox(width: 48)], // 중앙 정렬을 위한 공간
+      ),
       body: Column(
         children: [
-          // 상단 검정색 바
-          Container(
-            color: Colors.black,
-            height: 120,
-            child: Stack(
-              children: [
-                // 뒤로가기 버튼
-                Positioned(
-                  top: 40,
-                  left: 10,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                children: [
+                  // 훈련 목록 (기존 카드 방식 유지)
+                  for (int i = 0; i < _trainings.length; i++)
+                    _buildTrainingCard(i),
+
+                  const SizedBox(height: 20),
+
+                  // + 버튼 (훈련 추가)
+                  GestureDetector(
+                    onTap: _addTraining,
+                    child: Container(
+                      height: 60,
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.blue.shade300, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, color: Colors.blue.shade600, size: 24),
+                          const SizedBox(width: 8),
+                          Text(
+                            "훈련 추가",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                // 중앙에 이미지 + "Training Generation"
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // z_top_logo.png 이미지를 표시
-                        Image.asset(
-                          'assets/images/z_top_logo.png',
-                          width: 120,
-                          fit: BoxFit.contain,
+
+                  const SizedBox(height: 20),
+
+                  // 총 시간 / 총 거리
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                        const SizedBox(height: 4),
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
                           children: [
-                            Icon(Icons.description, color: Colors.pink, size: 24),
-                            SizedBox(width: 6),
-                            Text(
-                              "Training Generation",
+                            const Text(
+                              "총 거리",
                               style: TextStyle(
-                                color: Colors.pink,
-                                fontSize: 20,
+                                fontSize: 14,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "${_totalDist}m",
+                              style: const TextStyle(
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.grey.shade300,
+                        ),
+                        Column(
+                          children: [
+                            const Text(
+                              "총 시간",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "${_totalTime}초",
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
                               ),
                             ),
                           ],
@@ -326,94 +541,40 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
 
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // 훈련 목록
-                  for (int i = 0; i < _trainings.length; i++)
-                    _buildTrainingCard(i),
-                  const SizedBox(height: 20),
-
-                  // + 버튼
-                  GestureDetector(
-                    onTap: _addTraining,
-                    child: Container(
-                      height: 60,
-                      alignment: Alignment.center,
-                      child: const Text(
-                        "+",
-                        style: TextStyle(
-                          fontSize: 50,
-                          color: Colors.pink,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // 총 시간 / 총 거리
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Container(
-                        width: 120,
-                        height: 60,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          "총 시간:\n$_totalTime초",
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      Container(
-                        width: 120,
-                        height: 60,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          "총 거리:\n${_totalDist}m",
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 20),
 
                   // 음향 선택 (스피커 아이콘)
                   GestureDetector(
                     onTap: _onBeepSettings,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      color: Colors.black,
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.volume_up, color: Colors.pink),
-                          const SizedBox(width: 8),
-                          Text(
-                            "음향 선택 : $_selectedSound",
-                            style: const TextStyle(color: Colors.pink, fontSize: 16),
+                          Icon(Icons.volume_up, color: Colors.blue.shade600),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              "음향 선택: $_selectedSound",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
+                          Icon(Icons.settings, color: Colors.blue.shade600, size: 20),
                         ],
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 20),
 
                   // 레이어 + Start
@@ -423,74 +584,51 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
                       ElevatedButton(
                         onPressed: _onLayerPressed,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: Colors.blue.shade600,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: const Text(
                           "레이어",
-                          style: TextStyle(color: Colors.pink, fontSize: 18),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
                       ElevatedButton(
                         onPressed: _isLoading ? null : _onStart,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: Colors.blue.shade600,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.pink)
+                            ? const CircularProgressIndicator(color: Colors.white)
                             : const Text(
                           "Start",
-                          style: TextStyle(color: Colors.pink, fontSize: 18),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
                   ),
+
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
           ),
         ],
       ),
-    );
-  }
 
-  Widget _buildTrainingCard(int index) {
-    final train = _trainings[index];
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Stack(
-        children: [
-          // 기존 ListTile
-          ListTile(
-            onTap: () => _goDetail(index),
-            title: Text(
-              "${index + 1}. ${train.title}",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            trailing: Text(
-              "${train.distance}m / ${_formatCycle(train.cycle)}",
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ),
-
-          // 삭제 버튼 (X 버튼)
-          Positioned(
-            top: 0,
-            right: 0,
-            child: InkWell(
-              onTap: () => _deleteTraining(index),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                child: const Icon(
-                  Icons.close,
-                  size: 16,
-                  color: Colors.red,
-                ),
-              ),
-            ),
-          ),
-        ],
+      // + 버튼 (나중에 커뮤니티 기능용)
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showCommunityDialog,
+        backgroundColor: Colors.green.shade600,
+        child: const Icon(Icons.share, color: Colors.white),
       ),
     );
   }

@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/swimming_pool_selector.dart';
 import '../widgets/swimming_pool_search.dart';
-import '../../training/training_selection/training_screen.dart';
+import '../../swimming/screens/swimming_main_screen.dart'; // 수정된 import
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -16,12 +16,67 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String? selectedPoolName;
   Map<String, dynamic>? selectedPool;
+  List<Map<String, dynamic>> nearbyPools = []; // 주변 수영장 목록
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserSelectedPool();
+    _loadNearbyPools(); // 주변 수영장 로드
+  }
+
+  Future<void> _loadNearbyPools() async {
+    try {
+      // Firebase에서 주변 수영장 데이터 로드
+      final snapshot = await FirebaseFirestore.instance
+          .collection('swimming_pools')
+          .where('area', isEqualTo: '수원시') // 예시: 지역별 필터
+          .limit(10)
+          .get();
+
+      final pools = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'id': doc.id,
+          'name': data['name'] ?? '수영장',
+          'address': data['address'] ?? '',
+          'imageUrl': data['imageUrl'] ?? '',
+          'rating': data['rating'] ?? 0.0,
+          'distance': data['distance'] ?? 0,
+          'facilities': data['facilities'] ?? [],
+        };
+      }).toList();
+
+      setState(() {
+        nearbyPools = pools;
+      });
+    } catch (e) {
+      print('주변 수영장 로드 실패: $e');
+      // 오류 시 더미 데이터 사용
+      setState(() {
+        nearbyPools = [
+          {
+            'id': 'dummy1',
+            'name': '올림픽수영장',
+            'address': '수원시 영통구',
+            'imageUrl': '',
+            'rating': 4.5,
+            'distance': 1200,
+            'facilities': ['자유수영', '강습', '주차장'],
+          },
+          {
+            'id': 'dummy2',
+            'name': '시민수영장',
+            'address': '수원시 팔달구',
+            'imageUrl': '',
+            'rating': 4.2,
+            'distance': 800,
+            'facilities': ['자유수영', '아쿠아로빅'],
+          },
+        ];
+      });
+    }
   }
 
   Future<void> _loadUserSelectedPool() async {
@@ -54,18 +109,28 @@ class _HomeScreenState extends State<HomeScreen> {
     if (user == null) return;
 
     try {
+      // Firebase 구조에 맞게 데이터 정리
+      final poolData = {
+        'name': pool['name'],
+        'address': pool['address'],
+        'imageUrl': pool['imageUrl'] ?? '',
+        'rating': pool['rating'] ?? 0.0,
+        'facilities': pool['facilities'] ?? [],
+        'selectedAt': FieldValue.serverTimestamp(),
+      };
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .update({'selectedPool': pool});
+          .update({'selectedPool': poolData});
 
       setState(() {
-        selectedPool = pool;
-        selectedPoolName = pool['name'];
+        selectedPool = poolData;
+        selectedPoolName = poolData['name'];
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${pool['name']}이(가) 선택되었습니다')),
+        SnackBar(content: Text('${poolData['name']}이(가) 선택되었습니다')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -87,101 +152,70 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
         title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const SizedBox(width: 40),
-            Container(
-              alignment: Alignment.center,
-              child: Image.asset(
-                'assets/images/S.png',
-                width: 50,
-                height: 50,
-                fit: BoxFit.contain,
-              ),
-            ),
-            const Icon(
-              Icons.emoji_events,
-              color: Colors.amber,
-              size: 32,
+            // S.png 로고 (왼쪽 배치)
+            Image.asset(
+              'assets/images/S.png',
+              width: 40,
+              height: 40,
+              fit: BoxFit.contain,
             ),
           ],
         ),
+        actions: [
+          // 왕관 아이콘
+          const Icon(
+            Icons.emoji_events,
+            color: Colors.amber,
+            size: 28,
+          ),
+          const SizedBox(width: 16),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Swimming 버튼
+            // Swimming 버튼 - 직접 SwimmingMainScreen으로 이동
             Container(
               width: double.infinity,
-              height: 140,
+              height: 120,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.lightBlue.shade200,
-                    Colors.lightBlue.shade400,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.lightBlue.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
+                color: Colors.lightBlue.shade100,
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(20),
                   onTap: () {
-                    print("Swimming 버튼 클릭됨!");
-                    try {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const TrainingScreen(),
-                        ),
-                      );
-                    } catch (e) {
-                      print("네비게이션 오류: $e");
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("오류: $e")),
-                      );
-                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SwimmingMainScreen(), // 직접 이동
+                      ),
+                    );
                   },
                   child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.pool,
-                          size: 45,
-                          color: Colors.white,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Swimming',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Swimming',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
+
+            const SizedBox(height: 20),
+
+            // 사용자 통계 제거됨
+            // const UserStatsWidget(),
 
             const SizedBox(height: 30),
 
@@ -291,15 +325,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 16),
 
-            // 수영장 목록
+            // 우리동네 수영장 목록
             Column(
-              children: [
-                _buildPoolListItem('자유수영', '수영장'),
-                _buildPoolListItem('헬스', '헬스장'),
-                _buildPoolListItem('골프', '골프장'),
-                _buildPoolListItem('탁구', '탁구장'),
-                _buildPoolListItem('클라이밍', '클라이밍'),
-              ],
+              children: nearbyPools.map((pool) => _buildPoolListItem(
+                pool['name'],
+                pool['address'],
+                pool['imageUrl'],
+                pool['rating'].toDouble(),
+                pool['facilities'],
+              )).toList(),
             ),
           ],
         ),
@@ -307,39 +341,120 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPoolListItem(String name, String category) {
+  Widget _buildPoolListItem(
+      String name,
+      String address,
+      String imageUrl,
+      double rating,
+      List facilities,
+      ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
+          // 수영장 이미지
           Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              shape: BoxShape.circle,
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: imageUrl.isNotEmpty
+                ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.pool,
+                  color: Colors.blue.shade400,
+                  size: 30,
+                ),
+              ),
+            )
+                : Icon(
+              Icons.pool,
+              color: Colors.blue.shade400,
+              size: 30,
             ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            name,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+          const SizedBox(width: 16),
+
+          // 수영장 정보
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  address,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.star, color: Colors.amber, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      rating.toString(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        facilities.join(', '),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const Spacer(),
-          Text(
-            category,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
+
+          // 선택 버튼
+          IconButton(
+            onPressed: () => _selectPool({
+              'name': name,
+              'address': address,
+              'imageUrl': imageUrl,
+              'rating': rating,
+              'facilities': facilities,
+            }),
+            icon: Icon(
+              Icons.add_circle_outline,
+              color: Colors.blue.shade600,
             ),
           ),
         ],

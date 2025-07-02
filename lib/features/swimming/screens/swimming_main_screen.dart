@@ -5,40 +5,81 @@ import 'package:swim/features/training_generation/screens/tg_generation_screen.d
 class SwimmingMainScreen extends StatelessWidget {
   const SwimmingMainScreen({Key? key}) : super(key: key);
 
-  Widget _buildBigButton({
+  Widget _buildModernButton({
     required BuildContext context,
     required IconData icon,
-    required String label,
+    required String mainText,
+    required String subText,
     required VoidCallback onPressed,
   }) {
-    return InkWell(
-      onTap: onPressed,
-      child: Container(
-        height: 100,
-        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 40),
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.pink, size: 40),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.pink,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Material(
+        elevation: 4,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: 100,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade400, Colors.blue.shade600],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  // 아이콘 부분
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  // 텍스트 부분
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          mainText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (subText.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            subText,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -47,6 +88,7 @@ class SwimmingMainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -54,44 +96,56 @@ class SwimmingMainScreen extends StatelessWidget {
           children: [
             Column(
               children: [
-                const SizedBox(height: 30),
+                const SizedBox(height: 60), // 뒤로가기 버튼 공간 확보
+
+                // S.png 로고 (가운데 배치)
                 Center(
                   child: Image.asset(
-                    'assets/images/z_top_logo.png',
-                    width: 150,
+                    'assets/images/S.png',
+                    width: 100,
+                    height: 100,
                     fit: BoxFit.contain,
                   ),
                 ),
-                const SizedBox(height: 30),
+
+                const SizedBox(height: 40),
+
+                // 메인 컨텐츠
                 Expanded(
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Training Generation 버튼: TGGenerationScreen으로 이동
-                        _buildBigButton(
+                        // Training Generation 버튼
+                        _buildModernButton(
                           context: context,
-                          icon: Icons.description,
-                          label: "Training Generation",
+                          icon: Icons.description_outlined,
+                          mainText: "Training",
+                          subText: "Generation",
                           onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const TGGenerationScreen()),
+                                builder: (_) => const TGGenerationScreen(),
+                              ),
                             );
                           },
                         ),
+
+                        const SizedBox(height: 16),
+
                         // Quick Start 버튼
-                        _buildBigButton(
+                        _buildModernButton(
                           context: context,
-                          icon: Icons.pool,
-                          label: "Quick Start",
+                          icon: Icons.pool_outlined,
+                          mainText: "Quick",
+                          subText: "Start",
                           onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) =>
-                                  const SwimmingQuickStartLevelSelectionScreen()),
+                                builder: (_) => const SwimmingQuickStartLevelSelectionScreen(),
+                              ),
                             );
                           },
                         ),
@@ -99,6 +153,8 @@ class SwimmingMainScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                // 광고 배너
                 Container(
                   width: screenWidth * 0.9,
                   height: 60,
@@ -110,19 +166,42 @@ class SwimmingMainScreen extends StatelessWidget {
                   alignment: Alignment.center,
                   child: const Text(
                     "광고 배너",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
               ],
             ),
+
+            // 뒤로가기 버튼 (왼쪽 상단)
             Positioned(
-              top: 10,
-              left: 10,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.grey, size: 30),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+              top: 16,
+              left: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.arrow_back_ios,
+                    color: Colors.grey.shade700,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                ),
               ),
             ),
           ],

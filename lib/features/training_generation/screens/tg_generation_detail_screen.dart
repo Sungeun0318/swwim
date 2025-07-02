@@ -80,112 +80,116 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
     return (cycleSec * _count) + rest;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isGapEnabled = widget.numPeople >= 2;
-    return Scaffold(
-      body: Column(
+  // 새로운 스타일의 입력 필드
+  Widget _buildInputField({
+    required String label,
+    required TextEditingController controller,
+    TextInputType? keyboardType,
+    bool readOnly = false,
+    VoidCallback? onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            color: Colors.black,
-            height: 120,
-            child: Stack(
-              children: [
-                Positioned(
-                  top: 40,
-                  left: 10,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.description, color: Colors.pink, size: 40),
-                        SizedBox(height: 4),
-                        Text(
-                          "Training Generation",
-                          style: TextStyle(
-                            color: Colors.pink,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildTextField(
-                      "훈련 내용", _titleCtrl, keyboardType: TextInputType.text),
-                  if (!widget.isFirstTraining) _buildRestTimeRow(),
-                  _buildTextField("거리", _distanceCtrl),
-                  _buildCountRow(),
-                  _buildCycleRow(),
-                  _buildGapRow(isGapEnabled),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Container(
-                        width: 120,
-                        height: 60,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text("총 거리", style: TextStyle(fontSize: 14)),
-                            Text("$totalDistance",
-                                style: const TextStyle(fontSize: 16)),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        width: 120,
-                        height: 60,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text("총 시간", style: TextStyle(fontSize: 14)),
-                            Text("$totalTime",
-                                style: const TextStyle(fontSize: 16)),
-                          ],
-                        ),
-                      ),
-                    ],
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: onTap ?? () {}, // null일 때 빈 함수 실행
+            child: Container(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _onComplete,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.pink,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 40, vertical: 14),
+                ],
+              ),
+              child: TextField(
+                controller: controller,
+                keyboardType: keyboardType,
+                readOnly: readOnly,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 15),
+                ),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 피커 버튼 스타일
+  Widget _buildPickerField({
+    required String label,
+    required String value,
+    VoidCallback? onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: onTap,
+            child: Container(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: Colors.blue.shade300, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
                     ),
-                    child: const Text(
-                      "완료",
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    color: onTap != null ? Colors.blue.shade600 : Colors.grey,
                   ),
                 ],
               ),
@@ -196,169 +200,196 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController ctrl,
-      {TextInputType? keyboardType}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(label, style: const TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: ctrl,
-              keyboardType: keyboardType ?? TextInputType.number,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-            ),
+  // 정보 표시 카드
+  Widget _buildInfoCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildRestTimeRow() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          const SizedBox(
-            width: 80,
-            child: Text("쉬는 시간",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GestureDetector(
-              onTap: _showRestTimePicker,
-              child: Container(
-                height: 48,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
+          Column(
+            children: [
+              const Text(
+                "총 거리",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
                 ),
-                child: Text("$_restTimeMin분 $_restTimeSec초"),
               ),
-            ),
+              const SizedBox(height: 4),
+              Text(
+                "$totalDistance m",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            width: 1,
+            height: 40,
+            color: Colors.grey.shade300,
+          ),
+          Column(
+            children: [
+              const Text(
+                "총 시간",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "$totalTime 초",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCountRow() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 80,
-            child: Text("개수",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+  @override
+  Widget build(BuildContext context) {
+    final isGapEnabled = widget.numPeople >= 2;
+
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Center(
+          child: Image.asset(
+            'assets/images/S.png',
+            width: 40,
+            height: 40,
+            fit: BoxFit.contain,
           ),
-          const SizedBox(width: 10),
+        ),
+        centerTitle: true,
+        actions: const [SizedBox(width: 48)],
+      ),
+      body: Column(
+        children: [
           Expanded(
-            child: GestureDetector(
-              onTap: () =>
-                  _showSingleNumberPicker(
-                    title: "개수",
-                    currentValue: _count,
-                    minValue: 1,
-                    maxValue: 100,
-                    onSelected: (val) => setState(() => _count = val),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+
+                  // 훈련 내용
+                  _buildInputField(
+                    label: "훈련 내용",
+                    controller: _titleCtrl,
+                    keyboardType: TextInputType.text,
                   ),
-              child: Container(
-                height: 48,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text("$_count"),
+
+                  // 쉬는 시간 (첫 번째 훈련이 아닐 때만)
+                  if (!widget.isFirstTraining)
+                    _buildPickerField(
+                      label: "쉬는 시간",
+                      value: "$_restTimeMin분 $_restTimeSec초",
+                      onTap: _showRestTimePicker,
+                    ),
+
+                  // 거리
+                  _buildInputField(
+                    label: "거리 (m)",
+                    controller: _distanceCtrl,
+                    keyboardType: TextInputType.number,
+                  ),
+
+                  // 개수
+                  _buildPickerField(
+                    label: "개수",
+                    value: "$_count개",
+                    onTap: () => _showSingleNumberPicker(
+                      title: "개수",
+                      currentValue: _count,
+                      minValue: 1,
+                      maxValue: 100,
+                      onSelected: (val) => setState(() => _count = val),
+                    ),
+                  ),
+
+                  // 싸이클
+                  _buildPickerField(
+                    label: "싸이클",
+                    value: "$_cycleHour시간 $_cycleMin분 $_cycleSec초",
+                    onTap: _showCyclePicker,
+                  ),
+
+                  // 간격
+                  _buildPickerField(
+                    label: "간격 (초)",
+                    value: isGapEnabled ? "$_gap초" : "비활성화 (1명)",
+                    onTap: isGapEnabled
+                        ? () => _showSingleNumberPicker(
+                      title: "간격(초)",
+                      currentValue: _gap,
+                      minValue: 5,
+                      maxValue: 60,
+                      onSelected: (val) => setState(() => _gap = val),
+                    )
+                        : null,
+                  ),
+
+                  // 총 거리/시간 정보 카드
+                  _buildInfoCard(),
+
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildCycleRow() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 80,
-            child: Text("싸이클",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GestureDetector(
-              onTap: _showCyclePicker,
-              child: Container(
-                height: 48,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
+          // 완료 버튼
+          Container(
+            margin: const EdgeInsets.all(20),
+            width: double.infinity,
+            height: 55,
+            child: ElevatedButton(
+              onPressed: _onComplete,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text("$_cycleHour시간 $_cycleMin분 $_cycleSec초")
-                ,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGapRow(bool enabled) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 80,
-            child: Text("간격",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GestureDetector(
-              onTap: enabled
-                  ? () =>
-                  _showSingleNumberPicker(
-                    title: "간격(초)",
-                    currentValue: _gap,
-                    minValue: 5,  // 최소값 5초로 변경
-                    maxValue: 60,
-                    onSelected: (val) => setState(() => _gap = val),
-                  )
-                  : null,
-              child: Container(
-                height: 48,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: enabled ? Colors.white : Colors.grey[300],
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  "$_gap",
-                  style: TextStyle(color: enabled ? Colors.black : Colors.grey),
+              child: const Text(
+                "완료",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -379,36 +410,71 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
         maxValue - minValue + 1, (i) => i + minValue);
     int initialIndex = range.indexOf(currentValue);
     if (initialIndex < 0) initialIndex = 0;
+
     await showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return Container(
-          height: 250,
-          color: Colors.white,
+          height: 300,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
           child: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 16),
-                  Text(title, style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text("확인"),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade600,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
-                ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SizedBox(width: 60),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text(
+                        "확인",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Expanded(
                 child: CupertinoPicker(
                   scrollController: FixedExtentScrollController(
                       initialItem: initialIndex),
-                  itemExtent: 36,
+                  itemExtent: 40,
                   onSelectedItemChanged: (index) {
                     onSelected(range[index]);
                   },
                   children: range
-                      .map((val) => Center(child: Text("$val")))
+                      .map((val) => Center(
+                    child: Text(
+                      "$val",
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                  ))
                       .toList(),
                 ),
               ),
@@ -423,25 +489,55 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
     int tmpHour = _cycleHour;
     int tmpMin = _cycleMin;
     int tmpSec = _cycleSec;
+
     await showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return Container(
-          height: 300,
-          color: Colors.white,
+          height: 350,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
           child: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 16),
-                  const Text("싸이클 (시/분/초)", style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text("확인"),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade600,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
-                ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SizedBox(width: 60),
+                    const Text(
+                      "싸이클 (시/분/초)",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text(
+                        "확인",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Expanded(
                 child: Row(
@@ -450,36 +546,36 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
                       child: CupertinoPicker(
                         scrollController: FixedExtentScrollController(
                             initialItem: tmpHour),
-                        itemExtent: 36,
+                        itemExtent: 40,
                         onSelectedItemChanged: (index) {
                           tmpHour = index;
                         },
                         children: List.generate(24, (i) =>
-                            Center(child: Text("$i시"))),
+                            Center(child: Text("$i시", style: const TextStyle(fontSize: 16)))),
                       ),
                     ),
                     Expanded(
                       child: CupertinoPicker(
                         scrollController: FixedExtentScrollController(
                             initialItem: tmpMin),
-                        itemExtent: 36,
+                        itemExtent: 40,
                         onSelectedItemChanged: (index) {
                           tmpMin = index;
                         },
                         children: List.generate(60, (i) =>
-                            Center(child: Text("$i분"))),
+                            Center(child: Text("$i분", style: const TextStyle(fontSize: 16)))),
                       ),
                     ),
                     Expanded(
                       child: CupertinoPicker(
                         scrollController: FixedExtentScrollController(
                             initialItem: tmpSec),
-                        itemExtent: 36,
+                        itemExtent: 40,
                         onSelectedItemChanged: (index) {
                           tmpSec = index;
                         },
                         children: List.generate(60, (i) =>
-                            Center(child: Text("$i초"))),
+                            Center(child: Text("$i초", style: const TextStyle(fontSize: 16)))),
                       ),
                     ),
                   ],
@@ -500,25 +596,55 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
   Future<void> _showRestTimePicker() async {
     int tmpMin = _restTimeMin;
     int tmpSec = _restTimeSec;
+
     await showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return Container(
-          height: 300,
-          color: Colors.white,
+          height: 350,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
           child: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 16),
-                  const Text("쉬는 시간 (분/초)", style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text("확인"),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade600,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
-                ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SizedBox(width: 60),
+                    const Text(
+                      "쉬는 시간 (분/초)",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text(
+                        "확인",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Expanded(
                 child: Row(
@@ -527,24 +653,24 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
                       child: CupertinoPicker(
                         scrollController: FixedExtentScrollController(
                             initialItem: tmpMin),
-                        itemExtent: 36,
+                        itemExtent: 40,
                         onSelectedItemChanged: (index) {
                           tmpMin = index;
                         },
                         children: List.generate(60, (i) =>
-                            Center(child: Text("$i분"))),
+                            Center(child: Text("$i분", style: const TextStyle(fontSize: 16)))),
                       ),
                     ),
                     Expanded(
                       child: CupertinoPicker(
                         scrollController: FixedExtentScrollController(
                             initialItem: tmpSec),
-                        itemExtent: 36,
+                        itemExtent: 40,
                         onSelectedItemChanged: (index) {
                           tmpSec = index;
                         },
                         children: List.generate(60, (i) =>
-                            Center(child: Text("$i초"))),
+                            Center(child: Text("$i초", style: const TextStyle(fontSize: 16)))),
                       ),
                     ),
                   ],
@@ -599,17 +725,31 @@ class _TGGenerationDetailScreenState extends State<TGGenerationDetailScreen> {
   void _showAlert(String message) {
     showDialog(
       context: context,
-      builder: (ctx) =>
-          AlertDialog(
-            title: const Text("설정 오류"),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("확인"),
-              )
-            ],
-          ),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange.shade600),
+            const SizedBox(width: 8),
+            const Text("설정 오류"),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.blue.shade600,
+            ),
+            child: const Text(
+              "확인",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          )
+        ],
+      ),
     );
   }
 }
