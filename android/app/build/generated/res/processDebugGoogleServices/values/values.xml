@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="default_web_client_id" translatable="false">54469841565-mtcj8djgperadg0pia949cjj2pc2kgek.apps.googleusercontent.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">54469841565</string>
+    <string name="google_api_key" translatable="false">AIzaSyBxnDSHtvKVjoPpzeJJ8JfCVF_Ofy4CsPs</string>
+    <string name="google_app_id" translatable="false">1:54469841565:android:6b8f5caf504693e0a6fa74</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyBxnDSHtvKVjoPpzeJJ8JfCVF_Ofy4CsPs</string>
+    <string name="google_storage_bucket" translatable="false">swim-ddaad.firebasestorage.app</string>
+    <string name="project_id" translatable="false">swim-ddaad</string>
+</resources>
