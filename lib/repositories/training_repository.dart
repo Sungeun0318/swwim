@@ -1,7 +1,8 @@
+// lib/repositories/training_repository.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:swim/features/training_generation/models/training_session.dart';
+import '../features/training_generation/models/training_session.dart';
 
 class TrainingRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -89,6 +90,7 @@ class TrainingRepository {
       }
     }
   }
+
   Future<void> addTrainingToCalendar(
       String sessionId,
       Map<String, dynamic> calendarData,

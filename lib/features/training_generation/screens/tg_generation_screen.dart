@@ -1,9 +1,12 @@
+// lib/features/training_generation/screens/tg_generation_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:swim/features/swimming/models/training_detail_data.dart';
 import 'package:swim/features/training_generation/screens/tg_generation_detail_screen.dart';
 import 'package:swim/features/training_generation/models/training_session.dart';
 import 'package:swim/repositories/training_repository.dart';
+import 'package:swim/features/training_generation/widgets/tg_fab_menu.dart';
 import 'tg_beep_settings_screen.dart';
 import 'tg_timer_screen.dart';
 
@@ -22,6 +25,9 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
   int _totalTime = 0;
   final TrainingRepository _trainingRepository = TrainingRepository();
   bool _isLoading = false;
+
+  // FAB 메뉴를 위한 추가 변수
+  bool _isFabExpanded = false;
 
   @override
   void initState() {
@@ -244,14 +250,112 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
     }
   }
 
-  // 커뮤니티 기능 (나중에 구현)
+  // 커뮤니티 기능 (기존 함수 유지)
   void _showCommunityDialog() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("커뮤니티 공유 기능 (개발 예정)")),
     );
   }
 
-  // 사이클 시간을 포맷하는 함수
+  // 새로 추가: FAB 액션 처리
+  void _onFabAction(String action) {
+    setState(() => _isFabExpanded = false);
+
+    switch (action) {
+      case "커뮤니티 공유":
+        _showCommunityDialog();
+        break;
+      case "내 일정 저장":
+        _saveToCalendar();
+        break;
+    }
+  }
+
+  // 새로 추가: 내 일정 저장 (캘린더에 저장)
+  Future<void> _saveToCalendar() async {
+    if (_trainings.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('저장할 훈련이 없습니다')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('로그인이 필요합니다');
+      }
+
+      // 현재 날짜 설정
+      final now = DateTime.now();
+      final dateOnly = DateTime(now.year, now.month, now.day);
+
+      // 훈련 데이터 변환
+      final trainings = _trainings.map((training) => {
+        'title': training.title,
+        'distance': training.distance,
+        'count': training.count,
+        'cycle': training.cycle,
+        'interval': training.interval,
+        'restTime': training.restTime,
+      }).toList();
+
+      // 캘린더에 추가할 데이터
+      final calendarEvent = {
+        'userId': user.uid,
+        'date': Timestamp.fromDate(dateOnly),
+        'title': '훈련 계획 - ${_trainings.length}개',
+        'totalDistance': _totalDist,
+        'totalTime': _formatTime(_totalTime),
+        'numPeople': _numPeople,
+        'beepSound': _selectedSound.isNotEmpty,
+        'trainings': trainings,
+        'createdAt': FieldValue.serverTimestamp(),
+        'type': 'planned', // 계획된 훈련임을 표시
+      };
+
+      // Firebase에 저장
+      await FirebaseFirestore.instance
+          .collection('calendar_events')
+          .add(calendarEvent);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('내 일정에 저장되었습니다!'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('저장 실패: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _formatTime(int seconds) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final remainingSeconds = seconds % 60;
+
+    if (hours > 0) {
+      return "$hours:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}";
+    } else {
+      return "${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}";
+    }
+  }
+
+  // 사이클 시간을 포맷하는 함수 (기존)
   String _formatCycle(int cycle) {
     if (cycle < 60) {
       return "$cycle초";
@@ -279,106 +383,7 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
     }
   }
 
-  // 새로운 스타일의 훈련 카드 (기존 기능 유지)
-  Widget _buildTrainingCard(int index) {
-    final train = _trainings[index];
-    final isFirst = index == 0;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // 기존 ListTile 기능 유지하면서 새로운 디자인 적용
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => _goDetail(index), // 기존 기능 유지
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 훈련 제목
-                    Row(
-                      children: [
-                        Text(
-                          "${index + 1}. ${train.title}",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const Spacer(),
-                        // 거리/사이클 정보 (기존 trailing 정보)
-                        Text(
-                          "${train.distance}m / ${_formatCycle(train.cycle)}",
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // 추가 정보 표시
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: [
-                        _buildInfoChip("개수", "${train.count}개"),
-                        _buildInfoChip("간격", "${train.interval}초"),
-                        if (!isFirst) _buildInfoChip("쉬는시간", "${train.restTime}초"),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // 삭제 버튼 (X 버튼) - 기존 기능 유지
-          if (_trainings.length > 1)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: InkWell(
-                onTap: () => _deleteTraining(index),
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: 16,
-                    color: Colors.red,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // 정보 칩 위젯
+  // 정보 칩 위젯 (기존에서 약간 수정)
   Widget _buildInfoChip(String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -430,11 +435,102 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
                 children: [
                   // 훈련 목록 (기존 카드 방식 유지)
                   for (int i = 0; i < _trainings.length; i++)
-                    _buildTrainingCard(i),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        children: [
+                          // 기존 ListTile 기능 유지하면서 새로운 디자인 적용
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () => _goDetail(i), // 기존 기능 유지
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // 훈련 제목
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "${i + 1}. ${_trainings[i].title}",
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        // 거리/사이클 정보 (기존 trailing 정보)
+                                        Text(
+                                          "${_trainings[i].distance}m / ${_formatCycle(_trainings[i].cycle)}",
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 12),
+
+                                    // 추가 정보 표시
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 8,
+                                      children: [
+                                        _buildInfoChip("개수", "${_trainings[i].count}개"),
+                                        _buildInfoChip("간격", "${_trainings[i].interval}초"),
+                                        if (i > 0) _buildInfoChip("쉬는시간", "${_trainings[i].restTime}초"),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // 삭제 버튼 (X 버튼) - 기존 기능 유지
+                          if (_trainings.length > 1)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: InkWell(
+                                onTap: () => _deleteTraining(i),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
 
                   const SizedBox(height: 20),
 
-                  // + 버튼 (훈련 추가)
+                  // + 버튼 (훈련 추가) - 기존 기능 유지
                   GestureDetector(
                     onTap: _addTraining,
                     child: Container(
@@ -447,22 +543,26 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
                         boxShadow: [
                           BoxShadow(
                             color: Colors.blue.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add, color: Colors.blue.shade600, size: 24),
-                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.add,
+                            color: Colors.blue,
+                            size: 28,
+                          ),
+                          SizedBox(width: 8),
                           Text(
                             "훈련 추가",
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade600,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue,
                             ),
                           ),
                         ],
@@ -470,9 +570,9 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 30),
 
-                  // 총 시간 / 총 거리
+                  // 정보 표시 카드 (기존)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     padding: const EdgeInsets.all(20),
@@ -483,8 +583,8 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
                       boxShadow: [
                         BoxShadow(
                           color: Colors.grey.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -544,76 +644,110 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
 
                   const SizedBox(height: 20),
 
-                  // 음향 선택 (스피커 아이콘)
+                  // 음향 선택 (스피커 아이콘) - 기존 기능 유지
                   GestureDetector(
                     onTap: _onBeepSettings,
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.blue.shade200),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.volume_up, color: Colors.blue.shade600),
+                          Icon(
+                            Icons.volume_up,
+                            size: 24,
+                            color: Colors.blue.shade600,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
-                              "음향 선택: $_selectedSound",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.blue.shade700,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "음향 설정",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "$_selectedSound, $_numPeople명",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Icon(Icons.settings, color: Colors.blue.shade600, size: 20),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Colors.grey,
+                          ),
                         ],
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 30),
 
-                  // 레이어 + Start
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton(
-                        onPressed: _onLayerPressed,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                  // 시작 버튼들 (기존)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _onLayerPressed,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey.shade600,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              "레이어",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
-                        child: const Text(
-                          "레이어",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _onStart,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _onStart,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade600,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : const Text(
+                              "Start",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                          "Start",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
 
                   const SizedBox(height: 30),
@@ -624,11 +758,14 @@ class _TGGenerationScreenState extends State<TGGenerationScreen> {
         ],
       ),
 
-      // + 버튼 (나중에 커뮤니티 기능용)
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCommunityDialog,
-        backgroundColor: Colors.green.shade600,
-        child: const Icon(Icons.share, color: Colors.white),
+      // 새로 추가: 오른쪽 아래 FAB 메뉴
+      floatingActionButton: Container(
+        margin: const EdgeInsets.only(bottom: 20), // 하단 버튼 위에 위치
+        child: TGFabMenu(
+          isExpanded: _isFabExpanded,
+          toggle: () => setState(() => _isFabExpanded = !_isFabExpanded),
+          onAction: _onFabAction,
+        ),
       ),
     );
   }

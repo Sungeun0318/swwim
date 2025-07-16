@@ -1,14 +1,14 @@
-// lib/common/calendar/widgets/fab_menu.dart
+// lib/features/training_generation/widgets/tg_fab_menu.dart
 import 'package:flutter/material.dart';
 
-typedef FabActionCallback = void Function(String action);
+typedef TGFabActionCallback = void Function(String action);
 
-class FabMenu extends StatelessWidget {
+class TGFabMenu extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback toggle;
-  final FabActionCallback onAction;
+  final TGFabActionCallback onAction;
 
-  const FabMenu({
+  const TGFabMenu({
     super.key,
     required this.isExpanded,
     required this.toggle,
@@ -26,44 +26,35 @@ class FabMenu extends StatelessWidget {
             onTap: toggle,
             child: Container(
               width: double.infinity,
-              height: 250,
+              height: 200,
               color: Colors.transparent,
             ),
           ),
 
         // FAB 메뉴들
         if (isExpanded) ...[
-          // 일정 추가 버튼
-          _buildActionButton(
-            icon: Icons.event_note,
-            label: "일정 추가",
-            backgroundColor: Colors.green,
-            onPressed: () => onAction("일정 추가"),
-          ),
-          const SizedBox(height: 12),
-
           // 커뮤니티 공유 버튼
           _buildActionButton(
             icon: Icons.share,
             label: "커뮤니티 공유",
-            backgroundColor: Colors.orange,
+            backgroundColor: Colors.green,
             onPressed: () => onAction("커뮤니티 공유"),
           ),
           const SizedBox(height: 12),
 
-          // 훈련 바로 시작 버튼
+          // 내 일정 저장 버튼
           _buildActionButton(
-            icon: Icons.play_arrow,
-            label: "훈련 바로 시작",
+            icon: Icons.calendar_today,
+            label: "내 일정 저장",
             backgroundColor: Colors.blue,
-            onPressed: () => onAction("훈련 바로 시작"),
+            onPressed: () => onAction("내 일정 저장"),
           ),
           const SizedBox(height: 12),
         ],
 
         // 메인 FAB 버튼
         FloatingActionButton(
-          backgroundColor: Colors.blue,
+          backgroundColor: Colors.blue.shade600,
           onPressed: toggle,
           child: AnimatedRotation(
             turns: isExpanded ? 0.125 : 0,

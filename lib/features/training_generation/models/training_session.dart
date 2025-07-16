@@ -1,3 +1,4 @@
+// lib/features/training_generation/models/training_session.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:swim/features/swimming/models/training_detail_data.dart';
 
